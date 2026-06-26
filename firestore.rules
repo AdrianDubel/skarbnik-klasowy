@@ -1,0 +1,13 @@
+rules_version = '2';
+
+// Reguły bezpieczeństwa Firestore dla aplikacji Skarbnik Klasowy.
+// Każdy zalogowany użytkownik ma dostęp WYŁĄCZNIE do własnych danych
+// pod ścieżką users/{uid}/...  Skopiuj te reguły do zakładki
+// Firestore Database → Rules w konsoli Firebase i opublikuj.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
