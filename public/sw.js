@@ -6,7 +6,7 @@
    - Żądania cross-origin (Firebase, Google Fonts, API) — pomijane,
      obsługuje je przeglądarka, żeby nie psuć synchronizacji w czasie rzecz.
    ========================================================================= */
-const CACHE = 'skarbnik-cache-v1'
+const CACHE = 'skarbnik-cache-v2'
 const APP_SHELL = [
   '/',
   '/index.html',

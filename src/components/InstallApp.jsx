@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
-import Sheet from './Sheet.jsx'
+import { createPortal } from 'react-dom'
 import {
   IconDownload, IconShareIos, IconAddSquare, IconDots,
-  IconApple, IconAndroid, IconCheck, IconChart,
+  IconApple, IconAndroid, IconCheck, IconChart, IconBack,
 } from './Icons.jsx'
 
 /* =========================================================================
-   InstallApp — przycisk + instrukcja instalacji aplikacji jako PWA.
+   InstallApp — przycisk + OSOBNA STRONA z instrukcją instalacji PWA.
    - Na Androidzie/Chrome przechwytuje zdarzenie `beforeinstallprompt`
      i pozwala zainstalować jednym dotknięciem.
    - Dla iOS/Safari oraz komputerów pokazuje instrukcję krok po kroku.
@@ -156,49 +156,77 @@ export function InstallGuide({ onClose }) {
   const { canPrompt, promptInstall } = useInstallPrompt()
   const [tab, setTab] = useState(detectPlatform())
 
+  // Blokuj scroll tła i obsłuż wstecz/Escape, gdy strona jest otwarta.
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose?.()
+    document.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = ''
+    }
+  }, [onClose])
+
   const handleInstall = async () => {
     const ok = await promptInstall()
     if (ok) onClose?.()
   }
 
-  return (
-    <Sheet title="Zainstaluj aplikację" onClose={onClose}>
-      <p className="install__lead">
-        Dodaj <strong>Skarbnika</strong> do ekranu głównego telefonu lub na pulpit
-        komputera. Aplikacja otwiera się na pełnym ekranie, ma własną ikonę i
-        działa również offline.
-      </p>
+  // Renderujemy przez portal do <body>, aby strona NIE była uwięziona w
+  // kontekście paska górnego (ma backdrop-filter, który tworzy containing
+  // block dla position:fixed). Dzięki temu zawsze pokrywa cały ekran.
+  return createPortal(
+    <div className="install-page" role="dialog" aria-modal="true">
+      <header className="install-page__bar">
+        <button className="icon-btn" onClick={onClose} aria-label="Wróć">
+          <IconBack width={20} height={20} />
+        </button>
+        <h1 className="install-page__title">Pobierz aplikację</h1>
+        <span className="install-page__spacer" />
+      </header>
 
-      <div className="install__tabs" role="tablist">
-        {TABS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={tab === id}
-            className={`install__tab ${tab === id ? 'is-active' : ''}`}
-            onClick={() => setTab(id)}
-          >
-            <Icon width={18} height={18} />
-            {label}
-          </button>
-        ))}
+      <div className="install-page__body">
+        <div className="install-page__hero">
+          <div className="install-page__mark">S</div>
+          <p className="install__lead">
+            Dodaj <strong>Skarbnika</strong> do ekranu głównego telefonu lub na pulpit
+            komputera. Aplikacja otwiera się na pełnym ekranie, ma własną ikonę i
+            działa również offline.
+          </p>
+        </div>
+
+        <div className="install__tabs" role="tablist">
+          {TABS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={tab === id}
+              className={`install__tab ${tab === id ? 'is-active' : ''}`}
+              onClick={() => setTab(id)}
+            >
+              <Icon width={18} height={18} />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'android' && <AndroidGuide canPrompt={canPrompt} onInstall={handleInstall} />}
+        {tab === 'ios' && <IosGuide />}
+        {tab === 'desktop' && <DesktopGuide canPrompt={canPrompt} onInstall={handleInstall} />}
+
+        <div className="install__benefits">
+          <span><IconCheck width={15} height={15} /> Pełny ekran, bez paska przeglądarki</span>
+          <span><IconCheck width={15} height={15} /> Szybki dostęp z ikony</span>
+          <span><IconCheck width={15} height={15} /> Działa offline</span>
+        </div>
       </div>
-
-      {tab === 'android' && <AndroidGuide canPrompt={canPrompt} onInstall={handleInstall} />}
-      {tab === 'ios' && <IosGuide />}
-      {tab === 'desktop' && <DesktopGuide canPrompt={canPrompt} onInstall={handleInstall} />}
-
-      <div className="install__benefits">
-        <span><IconCheck width={15} height={15} /> Pełny ekran, bez paska przeglądarki</span>
-        <span><IconCheck width={15} height={15} /> Szybki dostęp z ikony</span>
-        <span><IconCheck width={15} height={15} /> Działa offline</span>
-      </div>
-    </Sheet>
+    </div>,
+    document.body
   )
 }
 
 /**
- * Przycisk otwierający instrukcję instalacji.
+ * Przycisk otwierający OSOBNĄ STRONĘ z instrukcją instalacji.
  * @param {'button'|'icon'|'link'} variant — wygląd elementu wyzwalającego.
  */
 export default function InstallApp({ variant = 'button', label = 'Pobierz aplikację', className = '' }) {

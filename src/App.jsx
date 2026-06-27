@@ -82,7 +82,7 @@ function Shell() {
             aria-current={active === id}
           >
             <span className="tab__icon"><Icon width={21} height={21} /></span>
-            {label}
+            <span className="tab__label">{label}</span>
           </button>
         ))}
       </nav>
