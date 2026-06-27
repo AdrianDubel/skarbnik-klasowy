@@ -9,6 +9,11 @@ export default function ExpensesView() {
   const [adding, setAdding] = useState(false)
   const expenses = state.expenses
 
+  const sourceLabel = (e) => {
+    const c = e.source ? state.collections.find((x) => x.id === e.source) : null
+    return c ? c.name : 'Kasa klasowa'
+  }
+
   const remove = (e) => {
     if (confirm(`Usunąć wydatek „${e.description}”?`)) {
       dispatch({ type: 'expense/remove', id: e.id })
@@ -50,7 +55,7 @@ export default function ExpensesView() {
           <div className={`item fade-in stagger-${Math.min(i + 4, 6)}`} key={e.id}>
             <div className="grow">
               <div className="item__name truncate">{e.description}</div>
-              <div className="item__meta">{formatDate(e.date)}</div>
+              <div className="item__meta truncate">{sourceLabel(e)} · {formatDate(e.date)}</div>
             </div>
             <div className="amount amount--coral" style={{ fontSize: '1.05rem' }}>
               −{formatMoney(e.amount)}
@@ -64,6 +69,10 @@ export default function ExpensesView() {
 
       {adding && (
         <ExpenseForm
+          collections={state.collections}
+          stats={derived.collectionStats}
+          balance={derived.balance}
+          defaultSource={derived.mainFundId || 'general'}
           onClose={() => setAdding(false)}
           onSave={(payload) => {
             dispatch({ type: 'expense/add', payload })
@@ -76,15 +85,33 @@ export default function ExpensesView() {
   )
 }
 
-function ExpenseForm({ onClose, onSave }) {
+function ExpenseForm({ collections, stats, balance, defaultSource, onClose, onSave }) {
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
+  const [source, setSource] = useState(defaultSource || 'general')
+  const [error, setError] = useState('')
+
+  const available =
+    source === 'general'
+      ? round2(balance || 0)
+      : round2(stats?.[source]?.remaining || 0)
+  const sourceName =
+    source === 'general'
+      ? 'kasie klasowej'
+      : `zbiórce „${collections.find((c) => c.id === source)?.name || ''}”`
 
   const submit = (e) => {
     e.preventDefault()
     const amt = round2(parseAmount(amount))
-    if (!description.trim() || amt <= 0) return
-    onSave({ description: description.trim(), amount: amt })
+    if (!description.trim() || amt <= 0) {
+      setError('Podaj opis i kwotę większą od zera.')
+      return
+    }
+    if (amt > available) {
+      setError(`Kwota przekracza dostępne środki w ${sourceName} (${formatMoney(available)}).`)
+      return
+    }
+    onSave({ description: description.trim(), amount: amt, source })
   }
 
   return (
@@ -92,12 +119,27 @@ function ExpenseForm({ onClose, onSave }) {
       <form onSubmit={submit}>
         <div className="field">
           <label>Opis</label>
-          <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="np. Bilety do kina" autoFocus />
+          <input value={description} onChange={(e) => { setDescription(e.target.value); setError('') }} placeholder="np. Bilety do kina" autoFocus />
         </div>
         <div className="field">
           <label>Kwota (zł)</label>
-          <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="120" />
+          <input inputMode="decimal" value={amount} onChange={(e) => { setAmount(e.target.value); setError('') }} placeholder="120" />
         </div>
+        <div className="field">
+          <label>Z jakiego konta</label>
+          <select value={source} onChange={(e) => { setSource(e.target.value); setError('') }}>
+            <option value="general">Kasa klasowa (ogólne saldo) ({formatMoney(balance || 0)})</option>
+            {collections.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.isMainFund ? `Składka na kasę — ${c.name}` : c.name} ({formatMoney(stats?.[c.id]?.collected || 0)})
+              </option>
+            ))}
+          </select>
+          <div className="item__meta" style={{ marginTop: '0.4rem' }}>
+            Dostępne do wypłaty: <span className={available <= 0 ? 'amount amount--coral' : 'amount amount--mint'}>{formatMoney(available)}</span>
+          </div>
+        </div>
+        {error && <p className="form-error">{error}</p>}
         <button type="submit" className="btn btn--primary btn--block mt-sm">Dodaj wydatek</button>
       </form>
     </Sheet>

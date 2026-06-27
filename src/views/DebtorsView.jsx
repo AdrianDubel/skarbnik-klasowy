@@ -4,8 +4,8 @@ import { formatMoney, fullName, initials } from '../utils/money.js'
 import { IconCheck, IconAlert } from '../components/Icons.jsx'
 
 export default function DebtorsView() {
-  const { state, notify } = useStore()
-  const [scope, setScope] = useState('global') // 'global' | collectionId
+  const { state, derived, notify } = useStore()
+  const [scope, setScope] = useState(derived.mainFundId || 'global') // 'global' | collectionId
 
   const debtors = useMemo(() => {
     if (scope === 'global') {
@@ -53,7 +53,9 @@ export default function DebtorsView() {
         <select value={scope} onChange={(e) => setScope(e.target.value)}>
           <option value="global">Globalnie — wszystkie zbiórki</option>
           {state.collections.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+            <option key={c.id} value={c.id}>
+              {c.isMainFund ? `Kasa klasowa — ${c.name}` : c.name}
+            </option>
           ))}
         </select>
       </div>

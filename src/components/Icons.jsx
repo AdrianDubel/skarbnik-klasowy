@@ -61,6 +61,9 @@ export const IconSparkle = (p) => (
 export const IconCloud = (p) => (
   <svg {...base} {...p}><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 9.5a3.5 3.5 0 0 1 0 8.5z"/></svg>
 )
+export const IconHistory = (p) => (
+  <svg {...base} {...p}><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M5 3v4h4"/><path d="M12 8v4.2l3 1.8"/></svg>
+)
 export const IconLogout = (p) => (
   <svg {...base} {...p}><path d="M15 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg>
 )

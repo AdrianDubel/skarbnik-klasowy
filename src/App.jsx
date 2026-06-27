@@ -5,9 +5,10 @@ import StudentsView from './views/StudentsView.jsx'
 import CollectionsView from './views/CollectionsView.jsx'
 import ExpensesView from './views/ExpensesView.jsx'
 import DebtorsView from './views/DebtorsView.jsx'
+import HistoryView from './views/HistoryView.jsx'
 import LoginView from './views/LoginView.jsx'
 import {
-  IconWallet, IconUsers, IconStack, IconMinus, IconAlert, IconCheck, IconLogout,
+  IconWallet, IconUsers, IconStack, IconMinus, IconAlert, IconCheck, IconLogout, IconHistory,
 } from './components/Icons.jsx'
 
 const TABS = [
@@ -15,6 +16,7 @@ const TABS = [
   { id: 'klasa', label: 'Klasa', Icon: IconUsers, View: StudentsView },
   { id: 'zbiorki', label: 'Zbiórki', Icon: IconStack, View: CollectionsView },
   { id: 'wydatki', label: 'Wydatki', Icon: IconMinus, View: ExpensesView },
+  { id: 'historia', label: 'Historia', Icon: IconHistory, View: HistoryView },
   { id: 'dluznicy', label: 'Dłużnicy', Icon: IconAlert, View: DebtorsView },
 ]
 

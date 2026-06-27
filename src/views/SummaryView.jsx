@@ -8,6 +8,8 @@ export default function SummaryView() {
     (a, b) => (derived.perStudent[b.id] || 0) - (derived.perStudent[a.id] || 0)
   )
   const negative = derived.balance < 0
+  const fund = state.collections.find((c) => c.id === derived.mainFundId) || null
+  const fundStats = fund ? derived.collectionStats[fund.id] : null
 
   return (
     <div className="view">
@@ -31,6 +33,28 @@ export default function SummaryView() {
           </div>
         </div>
       </div>
+
+      {fund && fundStats && (
+        <div className="card fade-in stagger-2 mt-md">
+          <div className="row row--between">
+            <div className="grow">
+              <div className="balance__label">Składka roczna na kasę</div>
+              <div className="item__name truncate" style={{ marginTop: 2 }}>{fund.name}</div>
+            </div>
+            <span className="pill pill--paid">{fundStats.paidCount}/{derived.studentCount} wpłaciło</span>
+          </div>
+          <div className="progress">
+            <div className="progress__fill" style={{ width: `${fundStats.progress * 100}%` }} />
+          </div>
+          <div className="balance__meta" style={{ marginTop: 'var(--space-sm)' }}>
+            <div><span>Zebrano</span><strong className="amount--gold">{formatMoney(fundStats.collected)}</strong></div>
+            <div><span>Oczekiwane</span><strong>{formatMoney(fundStats.expected)}</strong></div>
+            {fundStats.spent > 0
+              ? <div><span>Zostało</span><strong className={fundStats.remaining < 0 ? 'amount--coral' : 'amount--gold'}>{formatMoney(fundStats.remaining)}</strong></div>
+              : <div><span>Brakuje</span><strong className="amount--coral">{formatMoney(Math.max(0, fundStats.expected - fundStats.collected))}</strong></div>}
+          </div>
+        </div>
+      )}
 
       <div className="stat-grid mt-md fade-in stagger-3">
         <div className="stat">

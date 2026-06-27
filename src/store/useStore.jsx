@@ -142,7 +142,7 @@ function reducer(state, action) {
           if (status === 'unpaid' && !amount) {
             delete payments[studentId]
           } else {
-            payments[studentId] = { status, amount: round2(amount || 0) }
+            payments[studentId] = { status, amount: round2(amount || 0), paidAt: Date.now() }
           }
           return { ...c, payments }
         }),
@@ -159,7 +159,7 @@ function reducer(state, action) {
             const existing = payments[studentId]?.amount || 0
             const total = round2(existing + amount)
             const status = total >= c.target ? 'paid' : total > 0 ? 'partial' : 'unpaid'
-            payments[studentId] = { status, amount: total }
+            payments[studentId] = { status, amount: total, paidAt: Date.now() }
           }
           return { ...c, payments }
         }),
@@ -355,6 +355,18 @@ function computeDerived(state) {
   const totalExpenses = round2(expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0))
   const balance = round2(totalCollected - totalExpenses)
 
+  // expenses grouped by source account ('general' = whole cash, or a collectionId)
+  const collectionIds = new Set(collections.map((c) => c.id))
+  const expensesBySource = {}
+  let generalExpenses = 0
+  for (const e of expenses) {
+    const amt = Number(e?.amount) || 0
+    const src = e?.source && collectionIds.has(e.source) ? e.source : 'general'
+    if (src === 'general') generalExpenses += amt
+    else expensesBySource[src] = round2((expensesBySource[src] || 0) + amt)
+  }
+  generalExpenses = round2(generalExpenses)
+
   // per-collection stats
   const collectionStats = {}
   for (const c of collections) {
@@ -369,9 +381,12 @@ function computeDerived(state) {
       else if (amt > 0) partialCount++
     }
     const expected = round2((Number(c.target) || 0) * students.length)
+    const spent = round2(expensesBySource[c.id] || 0)
     collectionStats[c.id] = {
       collected: round2(collected),
       expected,
+      spent,
+      remaining: round2(collected - spent),
       paidCount,
       partialCount,
       unpaidCount: students.length - paidCount - partialCount,
@@ -385,7 +400,10 @@ function computeDerived(state) {
     totalExpenses,
     balance,
     collectionStats,
+    expensesBySource,
+    generalExpenses,
     studentCount: students.length,
+    mainFundId: (collections.find((c) => c.isMainFund) || null)?.id || null,
   }
 }
 
@@ -424,3 +442,68 @@ export function globalDebtors(collections, students) {
   }
   return [...map.values()].filter((e) => e.due > 0.001).sort((a, b) => b.due - a.due)
 }
+
+/** The collection flagged as the shared class fund (or null). */
+export function mainFundCollection(collections) {
+  return collections.find((c) => c.isMainFund) || null
+}
+
+/**
+ * Build a chronological ledger of every cash movement (deposits + expenses)
+ * with a running balance. Returns newest-first; `runningBalance` is the cash
+ * on hand right after each event.
+ */
+export function buildHistory(state) {
+  const { students, collections, expenses } = state
+  const nameById = new Map(students.map((s) => [s.id, fullNameOf(s)]))
+  const collectionById = new Map(collections.map((c) => [c.id, c]))
+
+  const events = []
+
+  for (const c of collections) {
+    for (const [studentId, p] of Object.entries(c.payments || {})) {
+      const amount = Number(p?.amount) || 0
+      if (amount <= 0) continue
+      events.push({
+        id: `pay-${c.id}-${studentId}`,
+        type: 'in',
+        date: Number(p?.paidAt) || Number(c.createdAt) || Date.now(),
+        title: nameById.get(studentId) || 'Uczeń',
+        subtitle: c.name,
+        isMainFund: !!c.isMainFund,
+        amount: round2(amount),
+      })
+    }
+  }
+
+  for (const e of expenses) {
+    const amount = Number(e?.amount) || 0
+    if (amount <= 0) continue
+    const srcCollection = e?.source ? collectionById.get(e.source) : null
+    events.push({
+      id: `exp-${e.id}`,
+      type: 'out',
+      date: Number(e?.date) || Date.now(),
+      title: e.description || 'Wydatek',
+      subtitle: srcCollection ? srcCollection.name : 'Kasa klasowa',
+      amount: round2(amount),
+    })
+  }
+
+  // Oldest → newest to accumulate the running balance correctly.
+  events.sort((a, b) => a.date - b.date)
+  let running = 0
+  for (const ev of events) {
+    running = round2(running + (ev.type === 'in' ? ev.amount : -ev.amount))
+    ev.runningBalance = running
+  }
+
+  // Present newest-first.
+  events.reverse()
+  return events
+}
+
+function fullNameOf(s) {
+  return `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Uczeń'
+}
+
