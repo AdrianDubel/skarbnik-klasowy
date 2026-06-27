@@ -75,3 +75,21 @@ export const IconGoogle = (p) => (
     <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C39 35.7 44 30.6 44 24c0-1.2-.1-2.4-.4-3.5z"/>
   </svg>
 )
+export const IconDownload = (p) => (
+  <svg {...base} {...p}><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1"/></svg>
+)
+export const IconShareIos = (p) => (
+  <svg {...base} {...p}><path d="M12 3v12"/><path d="m8.5 6.5 3.5-3.5 3.5 3.5"/><path d="M7 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-1"/></svg>
+)
+export const IconAddSquare = (p) => (
+  <svg {...base} {...p}><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 9v6M9 12h6"/></svg>
+)
+export const IconDots = (p) => (
+  <svg {...base} {...p}><circle cx="12" cy="5" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.3" fill="currentColor" stroke="none"/></svg>
+)
+export const IconApple = (p) => (
+  <svg {...base} {...p} fill="currentColor" stroke="none"><path d="M17.05 12.04c-.03-2.6 2.13-3.85 2.22-3.91-1.21-1.77-3.1-2.01-3.77-2.04-1.6-.16-3.13.94-3.94.94-.82 0-2.07-.92-3.41-.89-1.75.03-3.37 1.02-4.27 2.59-1.82 3.16-.47 7.83 1.31 10.39.87 1.25 1.9 2.66 3.25 2.61 1.31-.05 1.8-.85 3.39-.85 1.58 0 2.03.85 3.41.82 1.41-.02 2.3-1.28 3.16-2.54.99-1.45 1.4-2.86 1.42-2.93-.03-.01-2.73-1.05-2.76-4.15z"/><path d="M14.6 4.59c.72-.88 1.2-2.09 1.07-3.3-1.03.04-2.29.69-3.03 1.56-.66.77-1.24 2.01-1.09 3.19 1.15.09 2.33-.58 3.05-1.45z"/></svg>
+)
+export const IconAndroid = (p) => (
+  <svg {...base} {...p}><path d="M5 11.5h14v6a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 17.5z"/><path d="M5 11.5a7 7 0 0 1 14 0z"/><path d="M8.5 6 7.4 4.3M15.5 6l1.1-1.7"/><circle cx="9.5" cy="9" r=".55" fill="currentColor" stroke="none"/><circle cx="14.5" cy="9" r=".55" fill="currentColor" stroke="none"/></svg>
+)

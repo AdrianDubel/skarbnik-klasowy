@@ -1,5 +1,6 @@
 import { useStore } from '../store/useStore.jsx'
 import { IconGoogle, IconCloud } from '../components/Icons.jsx'
+import InstallApp from '../components/InstallApp.jsx'
 
 export default function LoginView() {
   const { auth } = useStore()
@@ -30,6 +31,9 @@ export default function LoginView() {
           <IconCloud width={16} height={16} />
           <span>Dane synchronizowane w czasie rzeczywistym (Firebase)</span>
         </div>
+
+        <div className="login__divider"><span>lub</span></div>
+        <InstallApp variant="button" label="Pobierz aplikację na telefon" />
       </div>
     </div>
   )
