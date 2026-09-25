@@ -48,5 +48,5 @@ export function initials(firstName = '', lastName = '') {
 }
 
 export function fullName(s) {
-  return `${s.firstName || ''} ${s.lastName || ''}`.trim()
+  return `${s.lastName || ''} ${s.firstName || ''}`.trim()
 }

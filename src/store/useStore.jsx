@@ -539,6 +539,6 @@ export function buildHistory(state) {
 }
 
 function fullNameOf(s) {
-  return `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Uczeń'
+  return `${s.lastName || ''} ${s.firstName || ''}`.trim() || 'Uczeń'
 }
 
