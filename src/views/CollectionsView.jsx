@@ -149,11 +149,13 @@ function CollectionDetail({ collection, onBack, onEdit, editingSheet }) {
 
   return (
     <div className="view">
-      <div className="row row--between fade-in stagger-1" style={{ marginBottom: '0.5rem' }}>
-        <button className="icon-btn" onClick={onBack} aria-label="Wróć"><IconBack /></button>
-        <div className="row gap-sm">
-          <button className="icon-btn" onClick={onEdit} aria-label="Edytuj"><IconEdit width={18} height={18} /></button>
-          <button className="icon-btn icon-btn--danger" onClick={remove} aria-label="Usuń"><IconTrash width={18} height={18} /></button>
+      <div className="detail-bar fade-in stagger-1">
+        <div className="row row--between">
+          <button className="icon-btn" onClick={onBack} aria-label="Wróć"><IconBack /></button>
+          <div className="row gap-sm">
+            <button className="icon-btn" onClick={onEdit} aria-label="Edytuj"><IconEdit width={18} height={18} /></button>
+            <button className="icon-btn icon-btn--danger" onClick={remove} aria-label="Usuń"><IconTrash width={18} height={18} /></button>
+          </div>
         </div>
       </div>
 
@@ -175,8 +177,11 @@ function CollectionDetail({ collection, onBack, onEdit, editingSheet }) {
           <div className="progress__fill" style={{ width: `${st.progress * 100}%` }} />
         </div>
         <div className="balance__meta">
-          <div><span>Opłacili</span><strong className="amount--mint">{st.paidCount}/{students.length}</strong></div>
+          <div><span>Opłacili</span><strong className="amount--mint">{st.paidCount}/{st.applicableCount}</strong></div>
           <div><span>Brakuje</span><strong className="amount--coral">{formatMoney(Math.max(0, st.expected - st.collected))}</strong></div>
+          {st.naCount > 0 && (
+            <div><span>Nie dotyczy</span><strong className="amount--muted">{st.naCount}</strong></div>
+          )}
           {st.spent > 0 && (
             <>
               <div><span>Wydano</span><strong className="amount--coral">{formatMoney(st.spent)}</strong></div>
@@ -230,9 +235,11 @@ function PaymentRow({ student, payment, target, onSet }) {
   const [draft, setDraft] = useState(String(payment.amount || ''))
 
   const cycle = () => {
-    // quick toggle: unpaid -> paid (full target) -> unpaid
-    if (payment.status === 'paid' || payment.amount >= target) {
+    // quick cycle: zalega/częściowo -> opłacone -> nie dotyczy -> zalega
+    if (payment.status === 'notApplicable') {
       onSet('unpaid', 0)
+    } else if (payment.status === 'paid' || payment.amount >= target) {
+      onSet('notApplicable', 0)
     } else {
       onSet('paid', target)
     }
@@ -245,11 +252,14 @@ function PaymentRow({ student, payment, target, onSet }) {
     setEditingAmt(false)
   }
 
+  const na = payment.status === 'notApplicable'
   const statusClass =
     payment.status === 'paid' ? 'pill--paid' :
+    na ? 'pill--na' :
     payment.status === 'partial' ? 'pill--partial' : 'pill--unpaid'
   const statusLabel =
     payment.status === 'paid' ? 'Opłacone' :
+    na ? 'Nie dotyczy' :
     payment.status === 'partial' ? 'Częściowo' : 'Zalega'
 
   return (
@@ -269,6 +279,8 @@ function PaymentRow({ student, payment, target, onSet }) {
             />
             <button className="btn btn--primary btn--sm" onClick={saveAmount}>OK</button>
           </div>
+        ) : na ? (
+          <div className="item__meta">Nie dotyczy tej zbiórki</div>
         ) : (
           <div className="item__meta">
             <span className="amount amount--mint">{formatMoney(payment.amount)}</span>
@@ -276,7 +288,7 @@ function PaymentRow({ student, payment, target, onSet }) {
           </div>
         )}
       </div>
-      <button className={`pill ${statusClass}`} onClick={cycle} style={{ cursor: 'pointer', border: 'none' }}>
+      <button className={`pill ${statusClass}`} onClick={cycle} style={{ cursor: 'pointer', border: 'none' }} title="Kliknij, aby zmienić status">
         {statusLabel}
       </button>
     </div>

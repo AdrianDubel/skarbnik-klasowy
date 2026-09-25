@@ -91,10 +91,13 @@ function ExpenseForm({ collections, stats, balance, defaultSource, onClose, onSa
   const [source, setSource] = useState(defaultSource || 'general')
   const [error, setError] = useState('')
 
+  const globalBalance = round2(balance || 0)
+  // Z konkretnej zbiórki można wydać aż do jej docelowej kwoty (saldo może zejść poniżej zera),
+  // ale nigdy więcej niż realnie mamy w całej kasie klasowej.
   const available =
     source === 'general'
-      ? round2(balance || 0)
-      : round2(stats?.[source]?.remaining || 0)
+      ? globalBalance
+      : Math.min(round2(stats?.[source]?.maxSpend || 0), globalBalance)
   const sourceName =
     source === 'general'
       ? 'kasie klasowej'

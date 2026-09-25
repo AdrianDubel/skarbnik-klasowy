@@ -373,23 +373,33 @@ function computeDerived(state) {
     let collected = 0
     let paidCount = 0
     let partialCount = 0
+    let naCount = 0
+    let applicable = 0
     for (const s of students) {
       const p = c.payments?.[s.id]
+      if (p?.status === 'notApplicable') {
+        naCount++
+        continue
+      }
+      applicable++
       const amt = Number(p?.amount) || 0
       collected += amt
       if (amt >= c.target && c.target > 0) paidCount++
       else if (amt > 0) partialCount++
     }
-    const expected = round2((Number(c.target) || 0) * students.length)
+    const expected = round2((Number(c.target) || 0) * applicable)
     const spent = round2(expensesBySource[c.id] || 0)
     collectionStats[c.id] = {
       collected: round2(collected),
       expected,
       spent,
       remaining: round2(collected - spent),
+      maxSpend: round2(expected - spent), // ile jeszcze można wydać z tej zbiórki (do celu)
       paidCount,
       partialCount,
-      unpaidCount: students.length - paidCount - partialCount,
+      naCount,
+      applicableCount: applicable,
+      unpaidCount: applicable - paidCount - partialCount,
       progress: expected > 0 ? Math.min(1, collected / expected) : 0,
     }
   }
@@ -418,11 +428,12 @@ export function debtorsForCollection(collection, students) {
   return students
     .map((s) => {
       const p = collection.payments?.[s.id]
+      if (p?.status === 'notApplicable') return null
       const paid = Number(p?.amount) || 0
       const due = round2((Number(collection.target) || 0) - paid)
       return { student: s, paid, due }
     })
-    .filter((row) => row.due > 0.001)
+    .filter((row) => row && row.due > 0.001)
     .sort((a, b) => b.due - a.due)
 }
 
@@ -431,7 +442,9 @@ export function globalDebtors(collections, students) {
   for (const s of students) map.set(s.id, { student: s, due: 0, collections: [] })
   for (const c of collections) {
     for (const s of students) {
-      const paid = Number(c.payments?.[s.id]?.amount) || 0
+      const p = c.payments?.[s.id]
+      if (p?.status === 'notApplicable') continue
+      const paid = Number(p?.amount) || 0
       const due = round2((Number(c.target) || 0) - paid)
       if (due > 0.001) {
         const entry = map.get(s.id)
@@ -446,6 +459,28 @@ export function globalDebtors(collections, students) {
 /** The collection flagged as the shared class fund (or null). */
 export function mainFundCollection(collections) {
   return collections.find((c) => c.isMainFund) || null
+}
+
+/**
+ * Per-student breakdown across every collection: paid / partial / unpaid / notApplicable.
+ * Handy for a parent-facing summary.
+ */
+export function studentCollectionHistory(state, studentId) {
+  const { collections } = state
+  return collections.map((c) => {
+    const p = c.payments?.[studentId]
+    const target = round2(Number(c.target) || 0)
+    if (p?.status === 'notApplicable') {
+      return {
+        id: c.id, name: c.name, target, paid: 0, due: 0,
+        status: 'notApplicable', isMainFund: !!c.isMainFund, deadline: c.deadline,
+      }
+    }
+    const paid = round2(Number(p?.amount) || 0)
+    const due = round2(Math.max(0, target - paid))
+    const status = target > 0 && paid >= target ? 'paid' : paid > 0 ? 'partial' : 'unpaid'
+    return { id: c.id, name: c.name, target, paid, due, status, isMainFund: !!c.isMainFund, deadline: c.deadline }
+  })
 }
 
 /**
