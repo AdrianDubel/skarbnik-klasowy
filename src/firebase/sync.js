@@ -59,6 +59,7 @@ export async function saveState(uid, state) {
     students: state.students || [],
     collections: state.collections || [],
     expenses: state.expenses || [],
+    transfers: state.transfers || [],
     updatedAt: Date.now(),
   })
 }

@@ -42,7 +42,7 @@ function demoState() {
   const expenses = [
     { id: uid(), description: 'Kwiaty dla wychowawcy', amount: 60, date: Date.now() },
   ]
-  return { students, collections, expenses }
+  return { students, collections, expenses, transfers: [] }
 }
 
 function loadState() {
@@ -54,6 +54,7 @@ function loadState() {
       students: parsed.students || [],
       collections: parsed.collections || [],
       expenses: parsed.expenses || [],
+      transfers: parsed.transfers || [],
     }
   } catch {
     return demoState()
@@ -62,13 +63,14 @@ function loadState() {
 
 /* ---------- Cloud-mode helpers ---------- */
 function emptyState() {
-  return { students: [], collections: [], expenses: [] }
+  return { students: [], collections: [], expenses: [], transfers: [] }
 }
 function normalizeState(d) {
   return {
     students: d?.students || [],
     collections: d?.collections || [],
     expenses: d?.expenses || [],
+    transfers: d?.transfers || [],
   }
 }
 function serializeState(s) {
@@ -131,7 +133,36 @@ function reducer(state, action) {
       return {
         ...state,
         collections: state.collections.filter((c) => c.id !== action.id),
+        transfers: (state.transfers || []).filter(
+          (t) => t.from !== action.id && t.to !== action.id
+        ),
       }
+    case 'collection/archive': {
+      const { id, mainFundId, amount } = action.payload
+      const now = Date.now()
+      const collections = state.collections.map((c) =>
+        c.id === id ? { ...c, archived: true, archivedAt: now } : c
+      )
+      let transfers = state.transfers || []
+      const amt = round2(amount || 0)
+      if (amt > 0 && mainFundId && mainFundId !== id) {
+        transfers = [
+          ...transfers,
+          { id: uid(), collectionId: id, from: id, to: mainFundId, amount: amt, date: now },
+        ]
+      }
+      return { ...state, collections, transfers }
+    }
+    case 'collection/unarchive': {
+      const { id } = action.payload
+      return {
+        ...state,
+        collections: state.collections.map((c) =>
+          c.id === id ? { ...c, archived: false, archivedAt: undefined } : c
+        ),
+        transfers: (state.transfers || []).filter((t) => t.collectionId !== id),
+      }
+    }
     case 'payment/set': {
       const { collectionId, studentId, status, amount } = action.payload
       return {
@@ -179,7 +210,7 @@ function reducer(state, action) {
     case 'data/reset':
       return demoState()
     case 'data/clear':
-      return { students: [], collections: [], expenses: [] }
+      return { students: [], collections: [], expenses: [], transfers: [] }
     case 'data/import':
       return action.payload
 
@@ -336,6 +367,7 @@ export function useStore() {
 /* ---------- Derived calculations ---------- */
 function computeDerived(state) {
   const { students, collections, expenses } = state
+  const transfers = state.transfers || []
 
   // total paid per student across all collections
   const perStudent = {}
@@ -401,6 +433,24 @@ function computeDerived(state) {
       applicableCount: applicable,
       unpaidCount: applicable - paidCount - partialCount,
       progress: expected > 0 ? Math.min(1, collected / expected) : 0,
+    }
+  }
+
+  // Apply archival transfers: unspent money leaves the source collection and
+  // tops up the class-fund (kasa klasowa). Global balance is unaffected.
+  for (const t of transfers) {
+    const amt = round2(Number(t.amount) || 0)
+    if (amt <= 0) continue
+    const from = collectionStats[t.from]
+    const to = collectionStats[t.to]
+    if (from) {
+      from.spent = round2(from.spent + amt)
+      from.remaining = round2(from.remaining - amt)
+      from.maxSpend = round2(from.maxSpend - amt)
+    }
+    if (to) {
+      to.collected = round2(to.collected + amt)
+      to.remaining = round2(to.remaining + amt)
     }
   }
 
@@ -490,6 +540,7 @@ export function studentCollectionHistory(state, studentId) {
  */
 export function buildHistory(state) {
   const { students, collections, expenses } = state
+  const transfers = state.transfers || []
   const nameById = new Map(students.map((s) => [s.id, fullNameOf(s)]))
   const collectionById = new Map(collections.map((c) => [c.id, c]))
 
@@ -522,6 +573,31 @@ export function buildHistory(state) {
       title: e.description || 'Wydatek',
       subtitle: srcCollection ? srcCollection.name : 'Kasa klasowa',
       amount: round2(amount),
+    })
+  }
+
+  for (const t of transfers) {
+    const amount = round2(Number(t?.amount) || 0)
+    if (amount <= 0) continue
+    const fromC = collectionById.get(t.from)
+    const toC = collectionById.get(t.to)
+    const date = Number(t?.date) || Date.now()
+    events.push({
+      id: `tr-out-${t.id}`,
+      type: 'out',
+      date,
+      title: 'Przeniesienie do kasy klasowej',
+      subtitle: fromC ? fromC.name : 'Zarchiwizowana zbiórka',
+      amount,
+    })
+    events.push({
+      id: `tr-in-${t.id}`,
+      type: 'in',
+      date,
+      title: fromC ? `Przeniesienie z „${fromC.name}”` : 'Przeniesienie z archiwum',
+      subtitle: toC ? toC.name : 'Kasa klasowa',
+      isMainFund: true,
+      amount,
     })
   }
 

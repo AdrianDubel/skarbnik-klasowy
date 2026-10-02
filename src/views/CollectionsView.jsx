@@ -5,6 +5,7 @@ import Sheet from '../components/Sheet.jsx'
 import ImportStatement from './ImportStatement.jsx'
 import {
   IconPlus, IconEdit, IconTrash, IconStack, IconUpload, IconBack, IconCalendar,
+  IconArchive, IconUnarchive,
 } from '../components/Icons.jsx'
 
 export default function CollectionsView() {
@@ -36,11 +37,17 @@ export default function CollectionsView() {
     )
   }
 
+  const activeCount = state.collections.filter((c) => !c.archived).length
+  // Active collections first (newest on top), archived ones pushed to the bottom.
+  const sortedCollections = [...state.collections].sort(
+    (a, b) => (a.archived ? 1 : 0) - (b.archived ? 1 : 0)
+  )
+
   return (
     <div className="view">
       <header className="view__head fade-in stagger-1">
         <h1 className="view__title">Zbió<em>rki</em></h1>
-        <p className="view__lead">{state.collections.length} aktywnych zbiórek</p>
+        <p className="view__lead">{activeCount} aktywnych zbiórek</p>
       </header>
 
       <button
@@ -59,7 +66,7 @@ export default function CollectionsView() {
           </div>
         )}
 
-        {state.collections.map((c, i) => {
+        {sortedCollections.map((c, i) => {
           const st = derived.collectionStats[c.id]
           const removeFromList = (ev) => {
             ev.stopPropagation()
@@ -74,7 +81,7 @@ export default function CollectionsView() {
               role="button"
               tabIndex={0}
               className={`card fade-in stagger-${Math.min(i + 3, 6)}`}
-              style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }}
+              style={{ width: '100%', textAlign: 'left', cursor: 'pointer', opacity: c.archived ? 0.55 : 1 }}
               onClick={() => setOpenId(c.id)}
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setOpenId(c.id)}
             >
@@ -82,6 +89,7 @@ export default function CollectionsView() {
                 <div className="grow">
                   <h3 style={{ fontSize: '1.1rem' }} className="truncate">
                     {c.isMainFund && <span className="pill pill--paid" style={{ marginRight: '0.5rem', verticalAlign: 'middle' }}>Kasa klasowa</span>}
+                    {c.archived && <span className="pill pill--na" style={{ marginRight: '0.5rem', verticalAlign: 'middle' }}>Zarchiwizowana</span>}
                     {c.name}
                   </h3>
                   <div className="item__meta">
@@ -147,6 +155,31 @@ function CollectionDetail({ collection, onBack, onEdit, editingSheet }) {
     }
   }
 
+  const archive = () => {
+    const remaining = round2(st?.remaining || 0)
+    const mainFundId = derived.mainFundId
+    let msg = `Zarchiwizować zbiórkę „${collection.name}”?`
+    if (remaining > 0 && mainFundId) {
+      msg += ` Niewykorzystane ${formatMoney(remaining)} zostanie przeniesione do kasy klasowej.`
+    }
+    if (!confirm(msg)) return
+    dispatch({
+      type: 'collection/archive',
+      payload: { id: collection.id, mainFundId, amount: remaining },
+    })
+    notify(
+      remaining > 0 && mainFundId
+        ? `Zarchiwizowano — przeniesiono ${formatMoney(remaining)} do kasy klasowej`
+        : 'Zarchiwizowano zbiórkę'
+    )
+    onBack()
+  }
+
+  const unarchive = () => {
+    dispatch({ type: 'collection/unarchive', payload: { id: collection.id } })
+    notify('Przywrócono zbiórkę')
+  }
+
   return (
     <div className="view">
       <div className="detail-bar fade-in stagger-1">
@@ -154,6 +187,13 @@ function CollectionDetail({ collection, onBack, onEdit, editingSheet }) {
           <button className="icon-btn" onClick={onBack} aria-label="Wróć"><IconBack /></button>
           <div className="row gap-sm">
             <button className="icon-btn" onClick={onEdit} aria-label="Edytuj"><IconEdit width={18} height={18} /></button>
+            {!collection.isMainFund && (
+              collection.archived ? (
+                <button className="icon-btn" onClick={unarchive} aria-label="Przywróć z archiwum"><IconUnarchive width={18} height={18} /></button>
+              ) : (
+                <button className="icon-btn" onClick={archive} aria-label="Archiwizuj"><IconArchive width={18} height={18} /></button>
+              )
+            )}
             <button className="icon-btn icon-btn--danger" onClick={remove} aria-label="Usuń"><IconTrash width={18} height={18} /></button>
           </div>
         </div>
@@ -163,6 +203,7 @@ function CollectionDetail({ collection, onBack, onEdit, editingSheet }) {
         <h1 className="view__title" style={{ fontSize: 'clamp(1.7rem, 7vw, 2.4rem)' }}>{collection.name}</h1>
         <p className="view__lead">
           {collection.isMainFund && <span className="pill pill--paid" style={{ marginRight: '0.5rem' }}>Kasa klasowa</span>}
+          {collection.archived && <span className="pill pill--na" style={{ marginRight: '0.5rem' }}>Zarchiwizowana</span>}
           Cel {formatMoney(collection.target)}/os.
           {collection.deadline ? ` · termin ${formatDate(collection.deadline)}` : ''}
         </p>

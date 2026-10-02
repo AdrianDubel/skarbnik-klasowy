@@ -100,7 +100,7 @@ export default function StudentsView() {
 }
 
 function StudentDetail({ student, onBack }) {
-  const { state, notify } = useStore()
+  const { state, dispatch, notify } = useStore()
   const rows = studentCollectionHistory(state, student.id)
 
   const paidRows = rows.filter((r) => r.status === 'paid')
@@ -111,16 +111,42 @@ function StudentDetail({ student, onBack }) {
   const totalPaid = rows.reduce((s, r) => s + r.paid, 0)
   const totalDue = owedRows.reduce((s, r) => s + r.due, 0)
 
-  const statusPill = (status) => {
+  const statusPill = (r) => {
     const cls =
-      status === 'paid' ? 'pill--paid' :
-      status === 'notApplicable' ? 'pill--na' :
-      status === 'partial' ? 'pill--partial' : 'pill--unpaid'
+      r.status === 'paid' ? 'pill--paid' :
+      r.status === 'notApplicable' ? 'pill--na' :
+      r.status === 'partial' ? 'pill--partial' : 'pill--unpaid'
     const label =
-      status === 'paid' ? 'Opłacone' :
-      status === 'notApplicable' ? 'Nie dotyczy' :
-      status === 'partial' ? 'Częściowo' : 'Zalega'
-    return <span className={`pill ${cls}`}>{label}</span>
+      r.status === 'paid' ? 'Opłacone' :
+      r.status === 'notApplicable' ? 'Nie dotyczy' :
+      r.status === 'partial' ? 'Częściowo' : 'Zalega'
+    return (
+      <button
+        className={`pill ${cls}`}
+        onClick={() => cycleStatus(r)}
+        style={{ cursor: 'pointer', border: 'none' }}
+        title="Kliknij, aby zmienić status wpłaty"
+      >
+        {label}
+      </button>
+    )
+  }
+
+  const cycleStatus = (r) => {
+    // zalega/częściowo → opłacone → nie dotyczy → zalega
+    let status, amount
+    if (r.status === 'notApplicable') {
+      status = 'unpaid'; amount = 0
+    } else if (r.status === 'paid' || (r.target > 0 && r.paid >= r.target)) {
+      status = 'notApplicable'; amount = 0
+    } else {
+      status = 'paid'; amount = r.target
+    }
+    dispatch({
+      type: 'payment/set',
+      payload: { collectionId: r.id, studentId: student.id, status, amount },
+    })
+    notify('Zaktualizowano status wpłaty')
   }
 
   const copySummary = async () => {
@@ -210,7 +236,7 @@ function StudentDetail({ student, onBack }) {
                 : <><span className="amount amount--mint">{formatMoney(r.paid)}</span>{r.target > 0 && ` / ${formatMoney(r.target)}`}</>}
             </div>
           </div>
-          {statusPill(r.status)}
+          {statusPill(r)}
         </div>
       ))}
     </div>

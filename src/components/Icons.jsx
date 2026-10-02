@@ -34,6 +34,12 @@ export const IconEdit = (p) => (
 export const IconTrash = (p) => (
   <svg {...base} {...p}><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg>
 )
+export const IconArchive = (p) => (
+  <svg {...base} {...p}><rect x="3.5" y="4.5" width="17" height="4" rx="1"/><path d="M5 8.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5"/><path d="M10 12h4"/></svg>
+)
+export const IconUnarchive = (p) => (
+  <svg {...base} {...p}><rect x="3.5" y="4.5" width="17" height="4" rx="1"/><path d="M5 8.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5"/><path d="M12 17v-5M9.5 14 12 11.5 14.5 14"/></svg>
+)
 export const IconUpload = (p) => (
   <svg {...base} {...p}><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
 )
